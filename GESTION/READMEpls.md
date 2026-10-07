@@ -4,17 +4,17 @@ _Archivo de ESTADO para la materia que dice arriba, si quieren usarlo para ayuda
 
 ### En Proceso:
 
-- P2: Wireframes -   - 0% - 6/10/2026 *Fargan*
-- P3: Requisitos Funcionales y No Funcionales -   - 0% - 6/10/2026 ...
--
+- P4: Diseño interfaz grafica
+- P5: EDT y OBS
 -
 
 ### Bloqueado (depende de...)
 
--
+- P6: Matriz raci
 -
 
 
 ### Historial:
 - ~~P1: Acta - 100% - 6/10/2026 *Daniel*~~
-
+- ~~P2: Wireframes -   - 100% - 6/10/2026 *Fargan*~~
+- ~~P3: Requisitos Funcionales y No Funcionales -   - 100% - 6/10/2026 *Edward, Jhon*~~
