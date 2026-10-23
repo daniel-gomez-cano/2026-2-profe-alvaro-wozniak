@@ -1,102 +1,135 @@
-**Acta de constitución del proyecto**
+# Acta de constitución del proyecto
 
-**1\. Nombre del proyecto y fecha**
+*Versión actualizada: incorpora el sensor de compuestos orgánicos volátiles MQ-135 como segundo sensor del nodo.*
 
-| Nombre del proyecto | Sistema IoT de apoyo a la decisión para el destino del banano según su estado de maduración |  |  |
-| :---- | :---- | :---- | :---- |
-| **Patrocinador** | Edward Stivens Pinto Granados | **Gerente del proyecto** | Daniel Gómez Cano |
-| **Cliente** | Isabela Agudelo López | **Responsable** | Santiago Avalo Monsalve |
-| **Fecha del acta** | 5 de octubre de 2026 | **Inicio / finalización** | 6 de octubre / 16 de diciembre de 2026 |
+## 1. Nombre del proyecto y fecha
 
-**2\. Justificación**
+| Campo | Detalle |
+| --- | --- |
+| **Nombre del proyecto** | Sistema IoT de apoyo a la decisión para el destino del banano según su estado de maduración |
+| **Patrocinador** | Edward Stivens Pinto Granados |
+| **Gerente del proyecto** | Daniel Gómez Cano |
+| **Cliente** | Isabella Agudelo López |
+| **Responsable** | Santiago Avalo Monsalve |
+| **Fecha del acta** | 5 de octubre de 2026 |
+| **Inicio / finalización** | 6 de octubre / 16 de diciembre de 2026 |
 
-Hoy el destino de un lote de bananos (venderlo local, enviarlo lejos, procesarlo o descartarlo) se decide a ojo, sin datos objetivos de su etapa de maduración, y eso genera pérdidas por fruta que llega pasada o se vende por debajo de su valor posible. La temperatura y la humedad describen el ambiente	, no la madurez; el color de la cáscara sí, y un sensor RGB (TCS34725) es más barato y fácil de integrar que una cámara. Un modelo determinístico estima la etapa por color y un LLM, con una tabla de contexto y reglas, recomienda el destino y un valor de mercado estimado.
+## 2. Justificación
 
-**3\. Objetivo**
+Hoy el destino de un lote de bananos (venderlo local, enviarlo lejos, procesarlo o descartarlo) se decide a ojo, sin datos objetivos de su etapa de maduración, y eso genera pérdidas por fruta que llega pasada o se vende por debajo de su valor posible.
 
-Entregar, a más tardar el **16 de diciembre de 2026**, un prototipo IoT de bajo costo (ESP32-S3 \+ sensor RGB TCS34725) que, demostrado en vivo de punta a punta (sensor → nube → modelo → LLM → dashboard), **clasifique la etapa de maduración de bananos no vistos con al menos 85 % de coincidencia (±1 etapa)** y recomiende un destino comercial con un valor de mercado estimado en JSON válido.
+La temperatura y la humedad describen el ambiente, no la madurez; el color de la cáscara sí, y un sensor RGB (TCS34725) es más barato y fácil de integrar que una cámara. Como segunda señal, y porque la fruta emite compuestos orgánicos volátiles (COV) a medida que madura, el nodo incorpora un sensor de gases MQ-135, de bajo costo, que entrega un índice relativo de COV. Este índice complementa al color y no lo reemplaza: el MQ-135 no es selectivo y su lectura depende de la temperatura, la humedad y la deriva del sensor.
 
-**4\. Alcance**
+Un modelo determinístico estima la etapa a partir del color (y del índice de COV) y un LLM, con una tabla de contexto y reglas, recomienda el destino y un valor de mercado estimado.
 
-**Definiciones.** *Maduración:* etapa (E1–E4) según el color de la cáscara; es lo que el sensor mide y el modelo predice. *Deterioro:* no se mide; “deteriorado” es solo una etiqueta operativa del protocolo de etiquetado (criterio visual), sin conclusión sobre inocuidad.
+## 3. Objetivos
 
-| 4.1 Qué incluye (entregables principales) | 4.2 Qué NO incluye |
-| :---- | :---- |
-| **Nodo sensor** ESP32-S3 \+ TCS34725, calibrado; transmisión continua ≥ 7 días con ≥ 95 % de lecturas recibidas. **Dataset propio** de 25 bananos con doble etiquetado (acuerdo ±1 etapa ≥ 90 %; kappa reportado). **Clasificador de etapa** (≥ 2 modelos, validación por banano, matriz de confusión) y backend con serie de tiempo. **LLM de decisión** con JSON de esquema fijo (misma acción ≥ 90 % en 20 repeticiones), tabla de contexto y capa de reglas que bloquea decisiones absurdas. **Dashboard** de punta a punta y documentación del repositorio. | Cámara y visión por computador. Otras frutas: solo banano. Sensores de gas (MQ, SGP30/TVOC) y de etileno. Precios de mercado reales en vivo y cadenas de suministro. App Android nativa e inferencia dentro de la ESP32-S3. Certificación de inocuidad o medir la descomposición con exactitud de laboratorio. Regresión de días restantes (la vida útil sale de la tabla de contexto). |
+### 3.1 Objetivo general
 
-**5\. Criterios de éxito (uno por interesado clave)**
+Entregar, a más tardar el **16 de diciembre de 2026**, un prototipo IoT de bajo costo (ESP32-S3 + sensor RGB TCS34725 + sensor de COV MQ-135) que, demostrado en vivo de punta a punta (sensores → nube → modelo → LLM → dashboard), **clasifique la etapa de maduración de bananos no vistos con al menos 85 % de coincidencia (±1 etapa)** y recomiende un destino comercial con un valor de mercado estimado en JSON válido.
+
+### 3.2 Objetivos específicos
+
+| # | Objetivo específico | Indicador de cumplimiento | Hito / fecha |
+| --- | --- | --- | --- |
+| OE1 | Montar y calibrar el nodo sensor ESP32-S3 + TCS34725 + MQ-135 con contenedor oscuro, LED propio y cámara de medición ventilable para el MQ-135 (precalentamiento y línea base en aire limpio). | Transmisión continua ≥ 7 días con ≥ 95 % de lecturas recibidas de ambos sensores. | H2 · 21 oct 2026 |
+| OE2 | Construir un dataset propio de 25 bananos (lecturas de color y de COV) con protocolo de etiquetado escrito y dos etiquetadores independientes. | Acuerdo ±1 etapa ≥ 90 % y kappa reportado. | H3 · 18 nov 2026 |
+| OE3 | Desarrollar y validar el clasificador de etapa de maduración (E1–E4) con al menos 2 modelos, comparando solo color frente a color + MQ-135 para documentar el aporte del segundo sensor. | Validación por banano, matriz de confusión y ≥ 85 % de coincidencia (±1 etapa) en bananos no vistos. | H4 · 2 dic 2026 |
+| OE4 | Implementar el LLM de decisión con salida JSON de esquema fijo, tabla de contexto y capa de reglas que bloquee decisiones absurdas. | Misma acción en ≥ 90 % de 20 repeticiones; tabla de destinos validada por el cliente. | H4 · 2 dic 2026 |
+| OE5 | Integrar el sistema de punta a punta en un dashboard (con serie de tiempo de color y COV) y documentar el repositorio. | Demo en vivo completa y README que permita reproducir la instalación y una lectura sin ayuda del equipo. | H5 · 16 dic 2026 |
+
+## 4. Alcance
+
+**Definiciones.**
+
+- *Maduración:* etapa (E1–E4) según el color de la cáscara; es lo que el sensor RGB mide y el modelo predice.
+- *Índice de COV:* lectura relativa del MQ-135 (sin conversión a concentraciones de laboratorio); se usa como señal complementaria y como contexto para el LLM.
+- *Deterioro:* no se mide con exactitud; “deteriorado” es solo una etiqueta operativa del protocolo de etiquetado (criterio visual), sin conclusión sobre inocuidad. El índice de COV es un indicio, no un diagnóstico.
+
+### 4.1 Qué incluye (entregables principales)
+
+- **Nodo sensor** ESP32-S3 + TCS34725 + MQ-135, calibrado; transmisión continua ≥ 7 días con ≥ 95 % de lecturas recibidas.
+- **Dataset propio** de 25 bananos con lecturas de color y COV, y doble etiquetado (acuerdo ±1 etapa ≥ 90 %; kappa reportado).
+- **Clasificador de etapa** (≥ 2 modelos, validación por banano, matriz de confusión, comparación solo color vs. color + MQ-135) y backend con serie de tiempo.
+- **LLM de decisión** con JSON de esquema fijo (misma acción ≥ 90 % en 20 repeticiones), tabla de contexto y capa de reglas que bloquea decisiones absurdas.
+- **Dashboard** de punta a punta y documentación del repositorio.
+
+### 4.2 Qué NO incluye
+
+- Cámara y visión por computador.
+- Otras frutas: solo banano.
+- Otros sensores de gas (SGP30/TVOC) y sensores de etileno; identificar compuestos específicos o calibrar el MQ-135 en ppm con exactitud de laboratorio.
+- Precios de mercado reales en vivo y cadenas de suministro.
+- App Android nativa e inferencia dentro de la ESP32-S3.
+- Certificación de inocuidad o medir la descomposición con exactitud de laboratorio.
+- Regresión de días restantes (la vida útil sale de la tabla de contexto).
+
+## 5. Criterios de éxito (uno por interesado clave)
 
 | Interesado | El proyecto salió bien si… |
-| :---- | :---- |
-| Docente (patrocinador) | Hay demo en vivo completa antes del 16 dic y el objetivo se cumple (sí/no), con informe de métricas (matriz de confusión, kappa). |
-| Equipo de desarrollo | Los 5 hitos se cumplen en su fecha y el alcance no cambia sin aprobación escrita del patrocinador. |
-| Cliente / usuario final | Valida la tabla de destinos y, tras la demo, confirma que la recomendación del dashboard le sirve para decidir el destino de un lote. |
-| Quien opere y mantenga el prototipo | Reproduce la instalación y una lectura de punta a punta solo con el README, sin ayuda del equipo. |
+| --- | --- |
+| Docente (patrocinador): Alvaro Salazar Victoria | Hay demo en vivo completa antes del 16 dic y el objetivo se cumple (sí/no), con informe de métricas (matriz de confusión, kappa y comparación solo color vs. color + MQ-135). |
+| Equipo de desarrollo: Santiago Avalo Monsalve, Daniel Gómez Cano, Edward Stivens Pinto Granados, Santiago Useche Tascon | Los 5 hitos se cumplen en su fecha y el alcance no cambia sin aprobación escrita del patrocinador. |
+| Cliente / usuario final: Isabella Agudelo López | Valida la tabla de destinos y, tras la demo, confirma que la recomendación del dashboard le sirve para decidir el destino de un lote. |
+| Quien opere y mantenga el prototipo: Isabella Agudelo López | Reproduce la instalación (incluido el precalentamiento y la línea base del MQ-135) y una lectura de punta a punta solo con el README, sin ayuda del equipo. |
 | Universidad y programa | La entrega cumple las normas del curso (formato, fecha, integridad académica) y es reproducible desde el repositorio. |
 | Proveedor del LLM | El uso respeta términos y cuotas de la API y el costo se mantiene dentro del presupuesto. |
-| Proveedores de componentes | El hardware llega a más tardar el 14 oct, para tener el nodo funcionando el 21 oct. |
+| Proveedores de componentes | El hardware (ESP32-S3, TCS34725 y MQ-135) llega a más tardar el 14 oct, para tener el nodo funcionando el 21 oct. |
 | Quien hoy decide a ojo | Revisa la escala de 4 etapas y confirma que corresponde a lo que reconocería a simple vista. |
 
-**6\. Interesados clave**
+## 6. Interesados clave
 
 | Interesado y rol | Qué espera | Poder | Interés | Estrategia |
-| :---- | :---- | :---: | :---: | :---- |
+| --- | --- | :-: | :-: | --- |
 | **Patrocinador:** Edward Stivens Pinto Granados | Resultados alineados con el acta, rigor y reproducibilidad; evalúa. | Alto | Alto | Gestionar de cerca: 15 min para ajustar y firmar; revisión en cada hito. |
-| **Equipo de desarrollo** | Alcance realista, roles claros y un resultado demostrable. | Alto | Alto | Gestionar de cerca: reunión semanal y tablero de tareas. |
+| **Equipo de desarrollo:** Santiago Avalo Monsalve, Daniel Gómez Cano, Edward Stivens Pinto Granados, Santiago Useche Tascon | Alcance realista, roles claros y un resultado demostrable. | Alto | Alto | Gestionar de cerca: reunión semanal y tablero de tareas. |
 | **Cliente / usuario final:** Isabella Agudelo López | Decisión más objetiva sobre el destino del lote y menos pérdidas. | Alto | Alto | Gestionar de cerca: preguntarle qué sería un buen resultado; validar la tabla de contexto. |
 | **Docente:** Álvaro Salazar Victoria | Repositorio y documentación reproducibles; llaves y costos de la API claros. | Bajo | Alto | Mantener informado: compartir el README y revisarlo con él antes de entregar. |
-| **Proveedor del servicio LLM** | Uso dentro de sus términos y cuotas. | Alto | Bajo | Mantener satisfecho: respetar límites y vigilar el costo de la API. |
-| **Proveedores de componentes** | Pedidos claros y a tiempo. | Bajo | Bajo | Monitorear: comprar de inmediato y tener un proveedor alterno. |
-| **Bodeguero o acopiador que hoy decide a ojo** | Que su experiencia no sea reemplazada ni desconocida. | Bajo | Alto | Mantener informado e involucrar: usar su criterio para validar la escala. |
+| **Especialista de inteligencia artificial de la empresa del servicio LLM** | Uso dentro de sus términos y cuotas. | Alto | Bajo | Mantener satisfecho: respetar límites y vigilar el costo de la API. |
+| **Proveedores de componentes** | Pedidos claros y a tiempo (ahora incluye el módulo MQ-135). | Bajo | Bajo | Monitorear: comprar de inmediato y tener un proveedor alterno. |
+| **Bodeguero o acopiador que hoy decide a ojo:** Fenibal Botero Giraldo | Que su experiencia no sea reemplazada ni desconocida. | Bajo | Alto | Mantener informado e involucrar: usar su criterio para validar la escala. |
+| **Transportador de alimentos:** Beto Avalo | Mejorar la velocidad de decisión de transporte. | Bajo | Alto | Mantener informado e involucrar: usar su criterio para validar la escala. |
 
-**7\. Supuestos**
+## 7. Supuestos
 
-* Suponemos que el docente acepta un dataset propio, sin dataset externo.
+- Suponemos que el docente acepta un dataset propio, sin dataset externo.
+- Suponemos que un solo sensor TCS34725 basta para el dataset y las pruebas; como lee un área pequeña, se hacen varias tomas por banano.
+- Suponemos que un solo módulo MQ-135, tras su precalentamiento y con línea base en aire limpio, detecta cambios relativos de COV suficientes para aportar información al clasificador; si no la aporta, el resultado se reporta igualmente en la comparación solo color vs. color + MQ-135.
+- Suponemos que los 25 bananos se consiguen en etapas distintas o se siguen desde un estado común, y cubren las etapas de interés.
+- Suponemos que la escala de 4 etapas es suficiente y entendible para dos etiquetadores sin experiencia previa.
+- Suponemos que la tabla de contexto (destinos, calidad mínima, tiempos de transporte, precios de referencia), definida por el equipo con base en la literatura y validada con un tendero si es posible, es suficientemente realista.
+- Suponemos que contamos con WiFi estable, una ESP32-S3 y acceso a una API de LLM durante todo el proyecto.
+- Suponemos que el docente y el cliente responden dudas y revisan los entregables en un máximo de 7 días hábiles.
 
-* Suponemos que un solo sensor TCS34725 basta para el dataset y las pruebas; como lee un área pequeña, se hacen varias tomas por banano.
+## 8. Restricciones
 
-* Suponemos que los 25 bananos se consiguen en etapas distintas o se siguen desde un estado común, y cubren las etapas de interés.
+- **Plazo:** cierre el 16 de diciembre de 2026 (unas 10 semanas); la maduración dura días y no se acelera sin alterar el experimento.
+- **Personas y horas:** 5 estudiantes con 8 h/semana cada uno; mínimo 2 etiquetadores independientes.
+- **Tecnología obligada:** ESP32-S3 + TCS34725 + MQ-135 (un nodo, sin cámara); el MQ-135 se lee por una entrada analógica compatible con WiFi y con divisor de voltaje para los 3,3 V de la ESP32-S3; modelo fuera de la ESP32-S3; LLM por API con salida JSON de esquema fijo validada por reglas.
+- **Presupuesto bajo:** sensor RGB de 20 000 a 80 000 COP, módulo MQ-135 (costo estimado de 10 000 a 25 000 COP, por confirmar con el proveedor), ESP32-S3 ya disponible, contenedor y cableado.
+- **Datos:** 25 bananos como tamaño de muestra, dataset propio y sin dataset externo.
 
-* Suponemos que la escala de 4 etapas es suficiente y entendible para dos etiquetadores sin experiencia previa.
+## 9. Riesgos iniciales (alto nivel; se detallan en el módulo de riesgos)
 
-* Suponemos que la tabla de contexto (destinos, calidad mínima, tiempos de transporte, precios de referencia), definida por el equipo con base en la literatura y validada con un tendero si es posible, es suficientemente realista.
-
-* Suponemos que contamos con WiFi estable, una ESP32-S3 y acceso a una API de LLM durante todo el proyecto.
-
-* Suponemos que el docente y el cliente responden dudas y revisan los entregables en un máximo de 7 días hábiles.
-
-**8\. Restricciones**
-
-* **Plazo:** cierre el 16 de diciembre de 2026 (unas 10 semanas); la maduración dura días y no se acelera sin alterar el experimento.
-
-* **Personas y horas:** 5 estudiantes con 8h/semana cada uno; mínimo 2 etiquetadores independientes.
-
-* **Tecnología obligada:** ESP32-S3 \+ TCS34725 (un nodo, sin cámara); modelo fuera de la ESP32-S3; LLM por API con salida JSON de esquema fijo validada por reglas.
-
-* **Presupuesto bajo:** sensor RGB de 20000 a 80000 COP, ESP32-S3 ya disponible, contenedor y cableado.
-
-* **Datos:** 25 bananos como tamaño de muestra, dataset propio y sin dataset externo.
-
-**9\. Riesgos iniciales (alto nivel; se detallan en el módulo de riesgos)**
-
-| \# | Riesgo | Consecuencia | Plan de respuesta | Dueño |
-| :---- | :---- | :---- | :---- | :---- |
+| # | Riesgo | Consecuencia | Plan de respuesta | Dueño |
+| --- | --- | --- | --- | --- |
 | 1 | Dataset pequeño (25 bananos) o poco diverso, y etiquetado subjetivo. | Sobreajuste; métricas poco confiables. | Validar por banano, modelos simples, varias lecturas por sesión; criterios de etiquetado escritos antes, dos etiquetadores independientes y medición de acuerdo. | Responsable de datos/ML |
 | 2 | Luz variable o color no uniforme del banano (el sensor lee un área pequeña). | Lecturas RGB ruidosas o sesgadas. | Contenedor oscuro con LED propio, calibración con blanco/gris y promedio de varias tomas. | Responsable de hardware |
 | 3 | Alucinaciones o inconsistencia del LLM. | Decisiones absurdas o cambiantes. | Esquema JSON cerrado, capa de reglas validadora y prueba de consistencia de 20 repeticiones. | Responsable de backend/LLM |
-| 4 | Retraso en la compra del sensor o bananos que maduran más rápido de lo previsto. | Se pierde la ventana de recolección. | Comprar el sensor de inmediato, escalonar la compra de bananos y dejar holgura en el cronograma. | Gerente del proyecto |
+| 4 | Retraso en la compra de los sensores o bananos que maduran más rápido de lo previsto. | Se pierde la ventana de recolección. | Comprar los sensores de inmediato, escalonar la compra de bananos y dejar holgura en el cronograma. | Gerente del proyecto |
+| 5 | El MQ-135 es poco selectivo, requiere precalentamiento, deriva con el tiempo y es sensible a temperatura y humedad; además, la lectura analógica puede fallar si se usa un pin que choca con el WiFi. | Lecturas de COV ruidosas, no comparables entre sesiones o sin aporte real al modelo. | Precalentar el sensor antes de cada sesión, registrar una línea base en aire limpio, usar un tiempo fijo de acumulación en la cámara de medición, tratar el valor como índice relativo, usar un pin ADC compatible con WiFi y reportar la comparación solo color vs. color + MQ-135. | Responsable de hardware |
 
-**10\. Hitos principales**
+## 10. Hitos principales
 
 | Hito | Fecha |
-| :---- | :---- |
+| --- | --- |
 | **H1.** Acta firmada y reunión de arranque | 9 oct 2026 |
-| **H2.** Nodo sensor montado, calibrado y transmitiendo (hardware comprado a más tardar el 14 oct) | 21 oct 2026 |
-| **H3.** Dataset de 25 bananos recolectado, limpio y con doble etiquetado | 18 nov 2026 |
+| **H2.** Nodo sensor (ESP32-S3 + TCS34725 + MQ-135) montado, calibrado y transmitiendo (hardware comprado a más tardar el 14 oct) | 21 oct 2026 |
+| **H3.** Dataset de 25 bananos (color y COV) recolectado, limpio y con doble etiquetado | 18 nov 2026 |
 | **H4.** Clasificador de etapa validado; LLM, tabla de contexto y capa de reglas operando | 2 dic 2026 |
 | **H5.** Integración de punta a punta (dashboard), pruebas de criterios, documentación y entrega final | 16 dic 2026 |
 
-**11\. Aprobación**
+## 11. Aprobación
 
 | Nombre | Rol | Fecha | Firma |
 | ----- | ----- | ----- | :---- |
