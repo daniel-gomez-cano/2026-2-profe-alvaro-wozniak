@@ -58,10 +58,6 @@ Al hacerlo, el total pasa de 129 a 107 horas-persona. Los porcentajes quedan rec
 
 ### Distribución propuesta del esfuerzo
 
-Perfecto. Conservamos las horas que acabas de indicar. El total correcto es 215 horas-persona, no 296. También recalculé los porcentajes para que correspondan a cada categoría.
-
-### Distribución propuesta del esfuerzo
-
 | Paquete de trabajo                             | Horas propuestas | Porcentaje aproximado |
 | ---------------------------------------------- | ------------------------ | --------------------- |
 | Hardware, firmware y conectividad              | 40                       | 18,6 %                |
