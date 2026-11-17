@@ -1,0 +1,7 @@
+{
+  "name": "bananin-web",
+  "version": "1.0.0",
+  "description": "Frontend de Bananín (gestión de banano) + servidor de ejemplo",
+  "scripts": { "start": "node server.js" },
+  "license": "MIT"
+}
