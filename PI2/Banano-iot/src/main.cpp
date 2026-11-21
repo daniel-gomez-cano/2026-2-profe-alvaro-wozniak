@@ -3,12 +3,13 @@
 //  Sensores: MQ-135 (analogico) + TCS34725 (I2C)  |  ESP32-S3
 //
 //  Cada fila del CSV = 1 toma de 1 banano:
-//    id_banano, dias, estado,
+//    id_banano, dias, estado, podrido,
 //    R_top,R_mid,R_bot, G_top,G_mid,G_bot, B_top,B_mid,B_bot,
 //    H_top,H_mid,H_bot, S_top,S_mid,S_bot, V_top,V_mid,V_bot,
 //    C_top,C_mid,C_bot,
 //    mq_mv, mq_rs, mq_ratio, valido
 //  (R,G,B = reflectancia calibrada 0..1; C = crudo del canal clear)
+//  podrido: 1 = si, 0 = no
 //
 //  El CSV se guarda en la flash (LittleFS: /dataset.csv) y se puede
 //  corregir por comandos o volcar al PC con "dump".
@@ -44,15 +45,12 @@ const float V_MIN = 0.10f;           // por debajo: HSV ruidoso
 // ---------- Escala de maduracion (AJUSTALA A TU GUIA DE ETIQUETADO) ----------
 // Por defecto: escala de von Loesecke 1..7
 const int ESTADO_MIN = 1;
-const int ESTADO_MAX = 7;
+const int ESTADO_MAX = 4;
 const char* ESTADOS[] = {
   "1 verde",
-  "2 verde con trazas de amarillo",
-  "3 mas verde que amarillo",
-  "4 mas amarillo que verde",
-  "5 amarillo con punta verde",
-  "6 todo amarillo",
-  "7 amarillo con manchas marrones"
+  "2 verde con amarillo",
+  "3 pinton",
+  "4 maduro"
 };
 
 // ---------- MQ-135 (alimentado a 3.3V, sin divisor) ----------
@@ -111,14 +109,15 @@ void imprimirCalibracion() {
 }
 
 // ============================================================
-//  Sesion: banano actual, dias y estado (persisten tras reiniciar)
+//  Sesion: banano actual, dias, estado y podrido (persisten tras reiniciar)
 // ============================================================
 struct Sesion {
   char  id[16];
   float dias;
   int   estado;
+  int   podrido;   // 0 = no, 1 = si
 };
-Sesion ses = {"B001", 0, 1};
+Sesion ses = {"B001", 0, 1, 0};
 int contadorId = 1;
 
 void idAuto(int n, char* out) { snprintf(out, 16, "B%03d", n); }
@@ -128,8 +127,9 @@ void cargarSesion() {
   contadorId = prefs.getInt("cnt", 1);
   String s = prefs.getString("id", "B001");
   s.toCharArray(ses.id, sizeof(ses.id));
-  ses.dias   = prefs.getFloat("dias", 0);
-  ses.estado = prefs.getInt("est", ESTADO_MIN);
+  ses.dias    = prefs.getFloat("dias", 0);
+  ses.estado  = prefs.getInt("est", ESTADO_MIN);
+  ses.podrido = prefs.getInt("pod", 0);
   prefs.end();
 }
 
@@ -139,13 +139,15 @@ void guardarSesion() {
   prefs.putString("id", ses.id);
   prefs.putFloat("dias", ses.dias);
   prefs.putInt("est", ses.estado);
+  prefs.putInt("pod", ses.podrido);
   prefs.end();
 }
 
 void mostrarSesion() {
-  Serial.printf("# SESION -> banano=%s | dias=%.1f | estado=%s\n", ses.id, ses.dias,
+  Serial.printf("# SESION -> banano=%s | dias=%.1f | estado=%s | podrido=%s\n", ses.id, ses.dias,
                 (ses.estado >= ESTADO_MIN && ses.estado <= ESTADO_MAX)
-                  ? ESTADOS[ses.estado - ESTADO_MIN] : "?");
+                  ? ESTADOS[ses.estado - ESTADO_MIN] : "?",
+                ses.podrido ? "si" : "no");
 }
 
 // ============================================================
@@ -221,7 +223,7 @@ Parte medirParte() {
 //  Archivo CSV (LittleFS)
 // ============================================================
 void escribirEncabezado(Print &out) {
-  out.print("id_banano,dias,estado");
+  out.print("id_banano,dias,estado,podrido");
   const char* canales[] = {"R", "G", "B", "H", "S", "V", "C"};
   for (int c = 0; c < 7; c++)
     for (int i = 0; i < N_PARTES; i++)
@@ -249,7 +251,7 @@ int contarFilas() {
   return max(0, n - 1);   // sin encabezado
 }
 
-// Borra una fila (borrar=true) o edita id/dias/estado (campo 0/1/2). fila: 1..N
+// Borra una fila (borrar=true) o edita id/dias/estado/podrido (campo 0/1/2/3). fila: 1..N
 bool modificarFila(int fila, bool borrar, int campo, const String& valor) {
   File in  = LittleFS.open(ARCHIVO, FILE_READ);
   File out = LittleFS.open(ARCHIVO_TMP, FILE_WRITE);
@@ -266,17 +268,20 @@ bool modificarFila(int fila, bool borrar, int campo, const String& valor) {
       int i1 = l.indexOf(',');
       int i2 = l.indexOf(',', i1 + 1);
       int i3 = l.indexOf(',', i2 + 1);
-      if (i1 > 0 && i2 > 0 && i3 > 0) {
+      int i4 = l.indexOf(',', i3 + 1);
+      if (i1 > 0 && i2 > 0 && i3 > 0 && i4 > 0) {
         hecho = true;
         if (borrar) { linea++; continue; }
-        String id = l.substring(0, i1);
-        String dias = l.substring(i1 + 1, i2);
-        String est = l.substring(i2 + 1, i3);
-        String resto = l.substring(i3);
+        String id    = l.substring(0, i1);
+        String dias  = l.substring(i1 + 1, i2);
+        String est   = l.substring(i2 + 1, i3);
+        String pod   = l.substring(i3 + 1, i4);
+        String resto = l.substring(i4);
         if (campo == 0) id = valor;
         else if (campo == 1) dias = valor;
         else if (campo == 2) est = valor;
-        l = id + "," + dias + "," + est + resto;
+        else if (campo == 3) pod = valor;
+        l = id + "," + dias + "," + est + "," + pod + resto;
       }
     }
     out.print(l);
@@ -308,7 +313,7 @@ void listarUltimas(int n) {
   File f = LittleFS.open(ARCHIVO, FILE_READ);
   if (!f) return;
   int linea = 0;
-  Serial.printf("# Filas %d a %d de %d (id,dias,estado,...):\n", desde, total, total);
+  Serial.printf("# Filas %d a %d de %d (id,dias,estado,podrido,...):\n", desde, total, total);
   while (f.available()) {
     String l = f.readStringUntil('\n');
     l.trim();
@@ -337,11 +342,17 @@ void imprimirParte(int i, const Parte& p) {
                 p.ok ? "OK" : "<- AVISO: saturada o muy oscura");
 }
 
+bool precalentadoManual = false;   // true = ignorar la espera de 15 min
+
+bool mqListo() {
+  return precalentadoManual || millis() >= PRECALENTAMIENTO_MS;
+}
+
 void capturar() {
   if (!tcsOk) { Serial.println("# TCS34725 no detectado"); return; }
   if (!cal.okBlanco || !cal.okOscuro) { Serial.println("# Falta calibrar color (k y w)"); return; }
   if (r0 <= 0) Serial.println("# AVISO: sin R0 del MQ-135 (b), mq_ratio saldra 0");
-  if (millis() < PRECALENTAMIENTO_MS)
+  if (!mqListo())
     Serial.println("# AVISO: MQ-135 aun precalentando, la fila quedara con valido=0");
 
   mostrarSesion();
@@ -368,11 +379,11 @@ void capturar() {
   float rs = calcularRs(mv);
   float ratio = (r0 > 0 && rs > 0) ? rs / r0 : 0;
 
-  bool valido = (millis() >= PRECALENTAMIENTO_MS) && (ratio > 0);
+  bool valido = (mqListo()) && (ratio > 0);
   for (int i = 0; i < N_PARTES; i++) valido = valido && partes[i].ok;
 
   char fila[700];
-  int n = snprintf(fila, sizeof(fila), "%s,%.1f,%d", ses.id, ses.dias, ses.estado);
+  int n = snprintf(fila, sizeof(fila), "%s,%.1f,%d,%d", ses.id, ses.dias, ses.estado, ses.podrido);
   // Orden: R_top,R_mid,R_bot, G_..., B_..., H_..., S_..., V_..., C_...
   for (int i = 0; i < N_PARTES; i++) n += snprintf(fila + n, sizeof(fila) - n, ",%.4f", partes[i].rc);
   for (int i = 0; i < N_PARTES; i++) n += snprintf(fila + n, sizeof(fila) - n, ",%.4f", partes[i].gc);
@@ -400,13 +411,15 @@ void capturar() {
 void ayuda() {
   Serial.println("# ---------------- COMANDOS (termina con Enter) ----------------");
   Serial.println("# m              capturar una fila (3 partes + MQ-135)");
-  Serial.println("# n              nuevo banano (id automatico, dias=0, estado=minimo)");
+  Serial.println("# n              nuevo banano (id automatico, dias=0, estado=minimo, podrido=no)");
   Serial.println("# id B007        fijar id a mano");
   Serial.println("# d 3 | d 2.5    fijar dias desde cosecha      d +  suma 1 dia");
   Serial.println("# e 4            fijar estado de maduracion    e  (solo) lista la escala");
+  Serial.println("# pod si | pod no  marcar si el banano esta podrido");
   Serial.println("# s              ver sesion actual");
+  Serial.println("# pre           alterna precalentamiento manual (omite espera de 15 min)");
   Serial.println("# l  | l 10      ultimas filas del dataset");
-  Serial.println("# edit 12 estado 5   corregir fila 12 (campos: id, dias, estado)");
+  Serial.println("# edit 12 estado 5   corregir fila 12 (campos: id, dias, estado, podrido)");
   Serial.println("# u              borrar la ultima fila     del 12  borrar la fila 12");
   Serial.println("# dump           imprimir todo el CSV (copialo a un .csv)");
   Serial.println("# borrar si      vaciar el dataset (no toca la calibracion)");
@@ -439,6 +452,7 @@ void procesarLinea(String l) {
     idAuto(contadorId, ses.id);
     ses.dias = 0;
     ses.estado = ESTADO_MIN;
+    ses.podrido = 0;
     guardarSesion();
     mostrarSesion();
   } else if (cmd == "id") {
@@ -465,27 +479,44 @@ void procesarLinea(String l) {
     ses.estado = v;
     guardarSesion();
     mostrarSesion();
+  } else if (cmd == "pod") {
+    String a = arg; a.toLowerCase();
+    if (a == "si" || a == "1") ses.podrido = 1;
+    else if (a == "no" || a == "0") ses.podrido = 0;
+    else { Serial.println("# Uso: pod si | pod no"); return; }
+    guardarSesion();
+    mostrarSesion();
   } else if (cmd == "s") {
     mostrarSesion();
     Serial.printf("# Filas en el dataset: %d\n", contarFilas());
   } else if (cmd == "l") {
     listarUltimas(arg.length() ? max(1, (int)arg.toInt()) : 5);
-  } else if (cmd == "edit") {
+  } else if (cmd == "pre") {
+  precalentadoManual = !precalentadoManual;
+  Serial.println(precalentadoManual ? "# Precalentamiento: OMITIDO (sensor marcado como caliente)"
+                                    : "# Precalentamiento: automatico (15 min desde el arranque)");
+  }else if (cmd == "edit") {
     int fila = 0; char campo[12] = {0}; char valor[24] = {0};
     if (sscanf(arg.c_str(), "%d %11s %23s", &fila, campo, valor) != 3) {
-      Serial.println("# Uso: edit 12 estado 5   (campos: id, dias, estado)");
+      Serial.println("# Uso: edit 12 estado 5   (campos: id, dias, estado, podrido)");
       return;
     }
     String c = String(campo); c.toLowerCase();
     String v = String(valor);
-    int idx = (c == "id") ? 0 : (c == "dias") ? 1 : (c == "estado") ? 2 : -1;
-    if (idx < 0) { Serial.println("# Campo invalido (id, dias, estado)"); return; }
+    int idx = (c == "id") ? 0 : (c == "dias") ? 1 : (c == "estado") ? 2 : (c == "podrido") ? 3 : -1;
+    if (idx < 0) { Serial.println("# Campo invalido (id, dias, estado, podrido)"); return; }
     if (idx == 0 && v.indexOf(',') >= 0) { Serial.println("# El id no puede tener comas"); return; }
     if (idx == 1) { char b[16]; snprintf(b, sizeof(b), "%.1f", v.toFloat()); v = b; }
     if (idx == 2) {
       int e = v.toInt();
       if (e < ESTADO_MIN || e > ESTADO_MAX) { Serial.println("# Estado fuera de rango"); return; }
       v = String(e);
+    }
+    if (idx == 3) {
+      v.toLowerCase();
+      if (v == "si") v = "1";
+      else if (v == "no") v = "0";
+      if (v != "0" && v != "1") { Serial.println("# podrido: 0/1 o si/no"); return; }
     }
     Serial.println(modificarFila(fila, false, idx, v) ? "# Fila editada" : "# No encontre esa fila");
   } else if (cmd == "u") {
